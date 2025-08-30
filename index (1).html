@@ -1,0 +1,104 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analog Clock</title>
+</head>
+<body style="margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(45deg, black, red, black); background-size: 200% 200%; animation: floatBackground 10s ease-in-out infinite;">
+    <h1 style="color: white; font-family: Arial, sans-serif; font-size: 3rem; margin-bottom: 1rem;">Clock</h1>
+    <div style="position: relative; width: 400px; height: 400px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; border: 5px solid #ccc; box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);">
+        <!-- Clock Numbers (Dots) -->
+        <div style="position: absolute; width: 100%; height: 100%;">
+            <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); width: 8px; height: 8px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); width: 8px; height: 8px; background: white; border-radius: 50%;"></div>
+            <!-- Additional Dots for 1, 2, 4, 5, 7, 8, 10, 11 -->
+            <div style="position: absolute; top: 5%; left: 75%; transform: translate(-50%, -50%) rotate(30deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 25%; right: 5%; transform: translate(-50%, -50%) rotate(60deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 25%; right: 5%; transform: translate(-50%, -50%) rotate(120deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 5%; left: 75%; transform: translate(-50%, -50%) rotate(150deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 5%; left: 25%; transform: translate(-50%, -50%) rotate(210deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 25%; left: 5%; transform: translate(-50%, -50%) rotate(240deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 25%; left: 5%; transform: translate(-50%, -50%) rotate(300deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 5%; left: 25%; transform: translate(-50%, -50%) rotate(330deg); width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+        </div>
+        <!-- Hour Hand -->
+        <div id="hour" style="position: absolute; width: 8px; height: 120px; background: white; left: 50%; top: 20%; transform-origin: bottom; transform: translateX(-50%); border-radius: 4px;"></div>
+        <!-- Minute Hand -->
+        <div id="minute" style="position: absolute; width: 6px; height: 160px; background: white; left: 50%; top: 10%; transform-origin: bottom; transform: translateX(-50%); border-radius: 3px;"></div>
+        <!-- Second Hand -->
+        <div id="second" style="position: absolute; width: 4px; height: 180px; background: white; left: 50%; top: 5%; transform-origin: bottom; transform: translateX(-50%); border-radius: 2px;"></div>
+        <!-- Center Dot -->
+        <div style="position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; left: 50%; top: 50%; transform: translate(-50%, -50%);"></div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+
+            const hourDeg = (hours % 12 + minutes / 60) * 30;
+            const minuteDeg = (minutes + seconds / 60) * 6;
+            const secondDeg = seconds * 6;
+
+            document.getElementById('hour').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+            document.getElementById('minute').style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+            document.getElementById('second').style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+
+    <style>
+        @keyframes floatBackground {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</body>
+</html>
